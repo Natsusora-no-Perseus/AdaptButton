@@ -32,7 +32,7 @@ int main() {
 
     // Register custom functions:
     char echo_args_name[] = "eargs";
-    srsh_register_func((void *)echo_args, echo_args_name);
+    srsh_register_func((void *)echo_args, echo_args_name, NULL);
 
     // uint8_t blink_flag = 0;
 

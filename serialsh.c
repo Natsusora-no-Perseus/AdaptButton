@@ -1,19 +1,13 @@
 #include "serialsh.h"
-#include <string.h>
 
-typedef struct {
-    char *name;
-    void *func;
-} SrshFuncEntry;
-
-static SrshFuncEntry srsh_func_list[SRSH_FUNCLST_LEN];
+static SrshFuncEntry srsh_func_list[SRSH_MAX_FUNCS];
 static int srsh_func_cnt = 0;
 
 int srsh_parse(char* input_b, int cut_trailing) {
     /**
-     * @param Pointer to buffer containing null-terminated input.
-     * @param Set TRUE if input contains '\n' before terminating '\0'.
-     * @return 0 on success, else on error.
+     * @param input_b: Pointer to buffer containing null-terminated input.
+     * @param cut_trailing: Set TRUE if input contains '\n' before null terminator.
+     * @return: 0 on success, else on error.
      */
 
     // Remove the trailing '\n' in input:
@@ -45,29 +39,33 @@ int srsh_parse(char* input_b, int cut_trailing) {
     return 0;
 }
 
-int srsh_register_func(void *func, char *name) {
+int srsh_register_func(void *func, char *name, SrshArgEntry *args) {
     /**
+     * srsh_register_func
      * Registers a function to a internal list.
-     * @param Function pointer to the called function.
-     * @param Name of the function being registered.
-     * @return 0 on success; else on error.
-     * @warning Make sure your registered function handles NULL as args correctly!
+     * @param func: Function pointer to the called function.
+     * @param name: Name of the function being registered.
+     * @param args: List of argument entries to be matched and called.
+     * @return: 0 on success; else on error.
+     * @warning: Make sure your registered function handles NULL as args correctly!
      */
-    if (srsh_func_cnt >= SRSH_FUNCLST_LEN) {
+    if (srsh_func_cnt >= SRSH_MAX_FUNCS) {
         return 1;
     }
     srsh_func_list[srsh_func_cnt].name = name;
     srsh_func_list[srsh_func_cnt].func = func;
+    srsh_func_list[srsh_func_cnt].args = args;
     srsh_func_cnt ++;
     return 0;
 }
-    
+
 int srsh_call_func(char *name, char *args) {
     /**
+     * srsh_call_func
      * Finds `name` in the registered list and calls it.
-     * @param Name of the function being called.
-     * @param Pointer to all arguments.
-     * @returns Called function's return value; -1 if no matching function found.
+     * @param name: Name of the function being called.
+     * @param args: Pointer to all arguments.
+     * @return: Called function's return value; -1 if no matching function found.
      */
     int idx = 0;
     while (idx < srsh_func_cnt) {
@@ -81,4 +79,84 @@ int srsh_call_func(char *name, char *args) {
     return -1;
 }
 
-int srsh_list_func(void);
+int srsh_list_func(void) { // TODO: implement this
+    return 1;
+}
+
+int srsh_proc_args(const char *input, const SrshArgEntry *arglst, size_t argcnt) {
+    /**
+     * srsh_proc_args
+     * Separates arguments and call their respective routines.
+     * @param input: String given by `srsh_call_func`.
+     * @param arglst: Array of `SrshArgEntry` specifying args and their params.
+     * @param argcnt: Length of arglst.
+     */
+    const char *iptr = input; // Pointer to traverse input
+    
+    if (arglst == NULL || argcnt == 0) {
+        return 1; // No arguments to parse against
+    }
+
+    if (input == NULL) {
+        return 1;
+    }
+
+    while (*iptr) {
+        while (isspace((unsigned char)*iptr)) {
+            iptr ++; // Move past whitespaces
+        }
+
+        if (*iptr == '-') {
+            const char arg = *(++iptr); // Skip the '-'
+
+            // Try to match arg against arglst
+            const SrshArgEntry *matched_arg = NULL;
+            iptr ++;
+            for (size_t i=0; i < argcnt; i++) {
+                if (arglst[i].name == arg) {
+                    matched_arg = &arglst[i];
+                    break;
+                }
+            }
+            if (matched_arg == NULL) {
+                return 1; // No matching arg found
+            }
+
+            // Separate parameters
+            const char *params[SRSH_MAX_ARGS] = {0};
+            for (int i=0; i < matched_arg->num_params; i++) {
+                while (isspace((unsigned char) *iptr)) {
+                    iptr++; // Move past whitespaces
+                }
+                if (*iptr == '\0') {
+                    return 1; // In this loop num_params > 0
+                }
+                const char *param_start = iptr;
+                while (*iptr && !isspace((unsigned char) *iptr)) {
+                    iptr ++;
+                }
+                size_t param_len = iptr - param_start;
+                char *param = malloc(param_len + 1);
+                if (!param) {
+                    return 1; // Malloc failed
+                }
+                strncpy(param, param_start, param_len);
+                param[param_len] = '\0';
+                params[i] = param;
+            }
+
+            // Call process with params
+            int result = matched_arg->process(params); 
+
+            // Clean up
+            for (int i=0; i< matched_arg->num_params; i++) {
+                free((void *)params[i]); // Free memory
+            }
+
+            return result;
+        } else {
+            return 1; // Invalid format
+        }
+    }
+    return 0;
+}

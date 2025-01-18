@@ -21,7 +21,11 @@ add_executable(main
     sfuncs.c
 )
 
-target_link_libraries(main pico_stdlib pico_stdio_usb hardware_adc)
+target_link_libraries(main pico_stdlib
+    pico_stdio_usb
+    hardware_adc
+    hardware_pwm
+    )
 
 target_include_directories(main PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
