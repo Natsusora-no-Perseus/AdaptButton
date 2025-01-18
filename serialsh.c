@@ -3,27 +3,27 @@
 static SrshFuncEntry srsh_func_list[SRSH_MAX_FUNCS];
 static int srsh_func_cnt = 0;
 
-int srsh_parse(char* input_b, int cut_trailing) {
+int srsh_parse(char* input_buf, int cut_trailing) {
     /**
-     * @param input_b: Pointer to buffer containing null-terminated input.
+     * @param input_buf: Pointer to buffer containing null-terminated input.
      * @param cut_trailing: Set TRUE if input contains '\n' before null terminator.
      * @return: 0 on success, else on error.
      */
 
     // Remove the trailing '\n' in input:
     if (cut_trailing) {
-        input_b[strcspn(input_b, "\n")] = 0;
+        input_buf[strcspn(input_buf, "\n")] = 0;
     }
 
-    if (input_b == NULL || input_b[0] == '\0') {
+    if (input_buf == NULL || input_buf[0] == '\0') {
         // Quit if buffer is NULL or contains nothing
         return 1;
     }
 
     // Do what strtok is supposed to do, because using it here produce unwanted
     // side effects
-    char *cmd = input_b;
-    char *params = strchr(input_b, ' ');
+    char *cmd = input_buf;
+    char *params = strchr(input_buf, ' ');
 
     if (params != NULL) {
         *params = '\0';
@@ -39,7 +39,7 @@ int srsh_parse(char* input_b, int cut_trailing) {
     return 0;
 }
 
-int srsh_register_func(void *func, char *name, SrshArgEntry *args) {
+int srsh_register_func(void *func, char *name) {
     /**
      * srsh_register_func
      * Registers a function to a internal list.
@@ -54,7 +54,6 @@ int srsh_register_func(void *func, char *name, SrshArgEntry *args) {
     }
     srsh_func_list[srsh_func_cnt].name = name;
     srsh_func_list[srsh_func_cnt].func = func;
-    srsh_func_list[srsh_func_cnt].args = args;
     srsh_func_cnt ++;
     return 0;
 }

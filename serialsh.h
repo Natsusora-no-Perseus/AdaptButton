@@ -21,8 +21,8 @@ typedef struct {
     SrshArgEntry *args;
 } SrshFuncEntry;
 
-int srsh_parse(char* input, int cut_trailing);
-int srsh_register_func(void *func, char *name, SrshArgEntry *args);
+int srsh_parse(char* input_buf, int cut_trailing);
+int srsh_register_func(void *func, char *name);
 int srsh_call_func(char *name, char *args); 
 int srsh_list_func(void);
 int srsh_proc_args(const char *input, const SrshArgEntry *arglst, size_t argcnt);
