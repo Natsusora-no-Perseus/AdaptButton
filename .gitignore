@@ -4,3 +4,4 @@ build/*
 .cache/*
 sch/adapt_button/sym-lib-table
 sch/adapt_button/adapt_button-backups/
+ipynb/.ipynb_checkpoints

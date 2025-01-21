@@ -1,10 +1,13 @@
 #include <pico/time.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <pico/stdlib.h>
 #include "hardware/pwm.h"
 #include "hardware/adc.h"
 #include "hardware/timer.h"
+
+#include "cJSON.h"
 
 #include "sfuncs.h"
 #include "serialsh.h"
@@ -83,15 +86,30 @@ int pwm_arg_parse(char *args) {
 
 // ====== ADC config =====
 
+enum adc_print_fmt {ADC_NORM, ADC_JSON};
 volatile bool adc_running = false;
 volatile unsigned int adc_smpl_intv = 100; // ADC sampling interval (ms)
+volatile enum adc_print_fmt adc_format = ADC_NORM;
 const unsigned int adc_gpio = 28; // ADC pin
 
 bool adc_timer_callback(struct repeating_timer *t) {
     if (adc_running) {
         adc_select_input(adc_gpio-26);
         uint16_t result = adc_read();
-        printf("ADC value: %u\n", result);
+        if (adc_format == ADC_JSON) {
+            // Print in JSON
+            uint32_t time_since_boot = to_ms_since_boot(get_absolute_time());
+            cJSON *json = cJSON_CreateObject();
+            cJSON_AddNumberToObject(json, "time", time_since_boot);
+            cJSON_AddNumberToObject(json, "ADC", result);
+
+            char *json_string = cJSON_PrintUnformatted(json);
+            printf("%s\n", json_string);
+            cJSON_Delete(json);
+            cJSON_free(json_string);
+        } else {
+            printf("ADC value: %u\n", result);
+        }
     }
     return true; // Continue repeating
 }
@@ -143,10 +161,25 @@ int proc_adc_interval(const char **params) {
     return 0;
 }
 
+int proc_adc_format(const char **params) {
+    int param = atoi(params[0]);
+    if (param == ADC_NORM) {
+        adc_format = ADC_NORM;
+        printf("ADC print format set to NORM");
+    } else if (param == ADC_JSON) {
+        adc_format = ADC_JSON;
+        printf("ADC print format set to JSON");
+    } else {
+        printf("Invalid ADC format value %d\n", param);
+    }
+    return 0;
+}
+
 int adc_arg_parse(char *args) {
     SrshArgEntry arg_lst[] = {
         {'s', 1, proc_adc_state},
-        {'i', 1, proc_adc_interval}
+        {'i', 1, proc_adc_interval},
+        {'f', 1, proc_adc_format}
     };
     int ret = srsh_proc_args(args, arg_lst, sizeof(arg_lst)/sizeof(arg_lst[0]));
     return ret;

@@ -19,6 +19,7 @@ add_executable(main
     main.c
     serialsh.c
     sfuncs.c
+    cJSON.c
 )
 
 target_link_libraries(main pico_stdlib
